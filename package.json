@@ -1,0 +1,26 @@
+{
+  "name": "visualize",
+  "version": "1.0.0",
+  "description": "Display Setting System",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tri-evendi/visualize.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tri-evendi/visualize/issues"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "homepage": "https://github.com/tri-evendi/visualize#readme",
+  "devDependencies": {
+    "esbuild": "^0.14.29"
+  },
+  "dependencies": {
+    "@editorjs/editorjs": "2.20.0",
+    "editorjs-undo": "0.1.6"
+  }
+}
