@@ -94,9 +94,10 @@ app_include_js = "visualize.bundle.js"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
+override_doctype_class = {
 #	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+	# "Workspace" : "visualize.overrides.desktop.CustomWorkspace"
+}
 
 # Document Events
 # ---------------
@@ -139,9 +140,10 @@ app_include_js = "visualize.bundle.js"
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
+override_whitelisted_methods = {
 #	"frappe.desk.doctype.event.event.get_events": "visualize.event.get_events"
-# }
+	"frappe.desk.desktop.get_desktop_page": "visualize.overrides.desktop.get_desktop_page",
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

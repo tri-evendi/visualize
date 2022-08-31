@@ -1,0 +1,101 @@
+{
+ "actions": [],
+ "creation": "2022-08-30 10:27:27.187012",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "type",
+  "label",
+  "icon",
+  "public",
+  "parent_menu",
+  "link_type",
+  "link_to",
+  "workspace_type",
+  "workspace_name"
+ ],
+ "fields": [
+  {
+   "default": "Link",
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "Link",
+   "reqd": 1
+  },
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Label",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.type == \"Card Break\"",
+   "fieldname": "icon",
+   "fieldtype": "Data",
+   "label": "Icon"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.type == \"Link\"",
+   "fieldname": "parent_menu",
+   "fieldtype": "Int",
+   "label": "Parent"
+  },
+  {
+   "fieldname": "link_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Link Type",
+   "mandatory_depends_on": "eval:doc.type==\"Link\"",
+   "options": "Module Def\nWorkspace\nDocType\nPage\nReport",
+   "read_only_depends_on": "eval:doc.type!=\"Link\""
+  },
+  {
+   "fieldname": "link_to",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Link To",
+   "mandatory_depends_on": "eval:doc.type==\"Link\"",
+   "options": "link_type",
+   "read_only_depends_on": "eval:doc.type!=\"Link\""
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.type == \"Card Break\"",
+   "fieldname": "public",
+   "fieldtype": "Check",
+   "label": "Public"
+  },
+  {
+   "default": "Workspace",
+   "fieldname": "workspace_type",
+   "fieldtype": "Select",
+   "label": "Wokkspace Type",
+   "options": "Workspace"
+  },
+  {
+   "fieldname": "workspace_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Workspace Name",
+   "options": "workspace_type"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2022-08-31 09:39:49.692298",
+ "modified_by": "Administrator",
+ "module": "Visualize",
+ "name": "Sidebar Menu",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

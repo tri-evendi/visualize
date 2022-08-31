@@ -34,7 +34,7 @@ frappe.ui.toolbar.Toolbar = class {
         this.public_pages = this.all_pages.filter((page) => page.public);
         this.private_pages = this.all_pages.filter((page) => !page.public);
 
-        console.log(this.public_pages);
+        // console.log(this.public_pages);
 
         if (this.all_pages) {
             frappe.workspaces = {};

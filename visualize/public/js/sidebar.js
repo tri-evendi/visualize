@@ -51,7 +51,9 @@ frappe.views.Workspace = class Workspace {
 		!this.discard && this.create_page_skeleton();
 		!this.discard && this.create_sidebar_skeleton();
 		this.sidebar_pages = !this.discard ? await this.get_pages() : this.sidebar_pages;
+		this.sidebar_pages_menu = !this.discard ? await this.get_pages_menu() : this.sidebar_pages_menu;
 		this.cached_pages = $.extend(true, {}, this.sidebar_pages);
+		this.all_pages_menu = this.sidebar_pages_menu.pages;
 		this.all_pages = this.sidebar_pages.pages;
 		this.has_access = this.sidebar_pages.has_access;
 
@@ -61,13 +63,15 @@ frappe.views.Workspace = class Workspace {
 
 		this.public_pages = this.all_pages.filter((page) => page.public);
 		this.private_pages = this.all_pages.filter((page) => !page.public);
+		this.public_pages_menu = this.all_pages_menu.filter((page) => page.public);
+		this.private_pages_menu = this.all_pages_menu.filter((page) => !page.public);
 
 		if (this.all_pages) {
 			frappe.workspaces = {};
 			for (let page of this.all_pages) {
 				frappe.workspaces[frappe.router.slug(page.name)] = { title: page.title };
 			}
-			this.make_sidebar();
+			// this.make_sidebar();
 			reload && this.show();
 		}
 	}
@@ -76,25 +80,27 @@ frappe.views.Workspace = class Workspace {
 		return frappe.xcall("frappe.desk.desktop.get_workspace_sidebar_items");
 	}
 
+	get_pages_menu(workspace) {
+		return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
+			workspace_name: workspace ? workspace : "Home"
+		});
+	}
+
 	sidebar_item_container(item) {
 		return $(`
-			<div class="sidebar-item-container ${item.is_editable ? "is-draggable" : ""}" item-parent="${
-			item.parent_page
-		}" item-name="${item.title}" item-public="${item.public || 0}">
+			<div class="sidebar-item-container" item-parent="${
+			item.parent_menu
+		}" item-name="${item.label}" item-public="${item.public || 0}">
 				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
 					<a
-						href="/app/${
-							item.public
-								? frappe.router.slug(item.title)
-								: "private/" + frappe.router.slug(item.title)
-						}"
-						class="item-anchor ${item.is_editable ? "" : "block-click"}" title="${__(item.title)}"
+						href="/app/${item.link_type == item.link_to ? frappe.router.slug(item.link_to) : frappe.router.slug(item.link_type) + "/" + item.link_to}"
+						class="item-anchor block-click"}" title="${__(item.label)}"
 					>
 						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(
 			item.icon || "folder-normal",
 			"md"
 		)}</span>
-						<span class="sidebar-item-label">${__(item.title)}<span>
+						<span class="sidebar-item-label">${__(item.label)}<span>
 					</a>
 					<div class="sidebar-item-control"></div>
 				</div>
@@ -103,21 +109,25 @@ frappe.views.Workspace = class Workspace {
 		`);
 	}
 
-	make_sidebar() {
+	make_sidebar(all_menu) {
 		if (this.sidebar.find(".standard-sidebar-section")[0]) {
 			this.sidebar.find(".standard-sidebar-section").remove();
 		}
 
-		this.sidebar_categories.forEach((category) => {
-			let root_pages = this.public_pages.filter(
-				(page) => page.parent_page == "" || page.parent_page == null
-			);
-			if (category != "Public") {
-				root_pages = this.private_pages.filter(
-					(page) => page.parent_page == "" || page.parent_page == null
-				);
-			}
-			this.build_sidebar_section(category, root_pages);
+		let parent_menu = all_menu.filter((page) => page.parent_menu === 0);
+
+		parent_menu.forEach((parent) => {
+			let root_pages = all_menu.filter((page) => page.parent_menu === parent.idx);
+			// let root_pages_container = this.sidebar_item_container(category);
+			// this.sidebar.append(root_pages_container);
+
+			// let root_pages = this.all_pages_menu.filter((page) => page.parent_menu == category.idx);
+			// if (category != "Public") {
+			// 	root_pages = this.private_pages.filter(
+			// 		(page) => page.parent_page == "" || page.parent_page == null
+			// 	);
+			// }
+			this.build_sidebar_section(parent.label, root_pages);
 		});
 
 		// Scroll sidebar to selected page if it is not in viewport.
@@ -160,20 +170,20 @@ frappe.views.Workspace = class Workspace {
 
 	append_item(item, container) {
 		let is_current_page =
-			frappe.router.slug(item.title) == frappe.router.slug(this.get_page_to_show().name) &&
+			frappe.router.slug(item.label) == frappe.router.slug(this.get_page_to_show().name) &&
 			item.public == this.get_page_to_show().public;
 		item.selected = is_current_page;
 		if (is_current_page) {
-			this.current_page = { name: item.title, public: item.public };
+			this.current_page = { name: item.label, public: item.public };
 		}
 
 		let $item_container = this.sidebar_item_container(item);
 		let sidebar_control = $item_container.find(".sidebar-item-control");
 
 		this.add_sidebar_actions(item, sidebar_control);
-		let pages = item.public ? this.public_pages : this.private_pages;
+		let pages = item.public ? this.public_pages_menu : this.private_pages_menu;
 
-		let child_items = pages.filter((page) => page.parent_page == item.title);
+		let child_items = pages.filter((page) => page.parent_menu == item.label);
 		if (child_items.length > 0) {
 			let child_container = $item_container.find(".sidebar-child-item");
 			child_container.addClass("hidden");
@@ -181,7 +191,7 @@ frappe.views.Workspace = class Workspace {
 		}
 
 		$item_container.appendTo(container);
-		this.sidebar_items[item.public ? "public" : "private"][item.title] = $item_container;
+		this.sidebar_items[item.public ? "public" : "private"][item.label] = $item_container;
 
 		if ($item_container.parent().hasClass("hidden") && is_current_page) {
 			$item_container.parent().toggleClass("hidden");
@@ -214,7 +224,7 @@ frappe.views.Workspace = class Workspace {
 		});
 	}
 
-	show() {
+	async show() {
 		if (!this.all_pages) {
 			// pages not yet loaded, call again after a bit
 			setTimeout(() => this.show(), 100);
@@ -222,7 +232,11 @@ frappe.views.Workspace = class Workspace {
 		}
 
 		let page = this.get_page_to_show();
+		// console.log(page);
 		this.page.set_title(__(page.name));
+		let data = await this.get_pages_menu(page.name);
+
+		this.make_sidebar(data.pages);
 
 		this.update_selected_sidebar(this.current_page, false); //remove selected from old page
 		this.update_selected_sidebar(page, true); //add selected on new page
@@ -301,7 +315,7 @@ frappe.views.Workspace = class Workspace {
 		} else if (Object.keys(this.all_pages).length !== 0) {
 			default_page = { name: this.all_pages[0].title, public: true };
 		} else {
-			default_page = { name: "Build", public: true };
+			default_page = { name: "Home", public: true };
 		}
 
 		let page =
