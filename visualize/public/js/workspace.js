@@ -87,7 +87,6 @@ frappe.views.Workspace = class Workspace {
 	}
 
 	sidebar_item_container(item) {
-		console.log("item sidebar",item);
 		return $(`
 			<div class="sidebar-item-container" item-parent="${
 			item.parent_menu
@@ -283,7 +282,6 @@ frappe.views.Workspace = class Workspace {
 				page: page,
 			})
 			.then((data) => {
-				console.log("get_data",data);
 				this.page_data = data.message;
 
 				// caching page data

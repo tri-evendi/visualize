@@ -52,22 +52,6 @@ frappe.views.ListSidebar = class ListSidebar {
 		this.setup_sidebar_menu();
 	}
 
-	async setup_menu() {
-		let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
-		this.tempData = sidebar_menu.pages;
-	}
-
-	get_pages_menu(workspace) {
-		return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
-			workspace_name: workspace ? workspace : "Home"
-		});
-	}
-
-	async setup_menu() {
-		let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
-		this.tempData = sidebar_menu.pages;
-	}
-
 	get_pages_menu(workspace) {
 		return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
 			workspace_name: workspace ? workspace : "Home"
@@ -75,7 +59,6 @@ frappe.views.ListSidebar = class ListSidebar {
 	}
 
 	async setup_sidebar_menu() {
-		// this.prepare_container();
 		let data = await this.get_pages_menu(this.pathname);
 		this.make_sidebar(data.pages);
 	}

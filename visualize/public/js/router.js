@@ -153,8 +153,6 @@ frappe.router = {
 
 		let private_workspace = route[1] && `${route[1]}-${frappe.user.name.toLowerCase()}`;
 		let custom_workspace = route[1];
-		console.log("this.routes[route[0]]", this.routes[route[0]]);
-		console.log("route[0]", route[0]);
 
 		if (frappe.workspaces[route[0]]) {
 			// public workspace
@@ -452,14 +450,10 @@ frappe.router = {
 		if (route.substr(0, 1) == "/") route = route.substr(1);
 		if (route.substr(0, 1) == "#") route = route.substr(1);
 		if (route.substr(0, 1) == "!") route = route.substr(1);
-		console.log("strip_prefix_route",route);
 		var workspace = route.split("/")[0];
-		console.log("workspace",workspace);
 		var subPrefix = route.split("/").slice(1).join("/");
-		console.log("subPrefix", subPrefix);
-		var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form"];
+		var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form", "custom-field"];
 		var routeFix = subPrefix != "" && !exceptPrefix.includes(workspace) ? subPrefix : route;
-		console.log("strip_prefix_routeFix", routeFix);
 		var finalRoute = routeFix.startsWith("new") ? route : routeFix;
 		return finalRoute;
 	},

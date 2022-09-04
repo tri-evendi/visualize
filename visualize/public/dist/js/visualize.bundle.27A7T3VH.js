@@ -10147,19 +10147,6 @@
       $(document).trigger("list_sidebar_setup");
       this.setup_sidebar_menu();
     }
-    async setup_menu() {
-      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
-      this.tempData = sidebar_menu.pages;
-    }
-    get_pages_menu(workspace) {
-      return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
-        workspace_name: workspace ? workspace : "Home"
-      });
-    }
-    async setup_menu() {
-      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
-      this.tempData = sidebar_menu.pages;
-    }
     get_pages_menu(workspace) {
       return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
         workspace_name: workspace ? workspace : "Home"
@@ -10700,6 +10687,7 @@
     async setup_menus(reload) {
       this.sidebar_pages = await this.get_menus();
       this.cached_pages = $.extend(true, {}, this.sidebar_pages);
+      this.pathname = window.location.pathname.split("/")[2];
       this.all_pages = this.sidebar_pages.pages;
       this.has_access = this.sidebar_pages.has_access;
       this.all_pages.forEach((page) => {
@@ -10713,7 +10701,7 @@
           frappe.workspaces[frappe.router.slug(page.name)] = { title: page.title };
         }
         this.make_menu(this.public_pages);
-        reload && this.show();
+        reload;
       }
     }
     get_menus() {
@@ -10726,66 +10714,17 @@
       $(".custom-navbar").append(menu);
     }
     build_menu(pages) {
-      let menu = $('<ul class="navbar-default navbar-nav"></ul>');
-      let is_current_page = frappe.router.slug(this.get_page_to_show().name);
+      let navbar = $('<ul class="navbar-default navbar-nav"></ul>');
       pages.forEach((item) => {
-        let menuList = $(`
-				<li class="nav-item ${is_current_page == frappe.router.slug(item.name) ? "active" : ""}">
+        let navbar_item = $(`
+				<li class="nav-item">
 					<a class="nav-link" href="/app/${frappe.router.slug(item.title)}"></a>
 				</li>`);
-        let a = menuList.find("a");
+        let a = navbar_item.find("a");
         a.html(item.title);
-        menu.append(menuList);
+        navbar.append(navbar_item);
       });
-      return menu;
-    }
-    show() {
-      if (!this.all_pages) {
-        setTimeout(() => this.show(), 100);
-        return;
-      }
-      let page = this.get_page_to_show();
-      this.page.set_title(__(page.name));
-      this.update_selected_sidebar(this.current_page, false);
-      this.update_selected_sidebar(page, true);
-      this.show_page(page);
-    }
-    get_page_to_show() {
-      let default_page;
-      if (localStorage.current_page && this.all_pages.filter((page2) => page2.title == localStorage.current_page).length != 0) {
-        default_page = {
-          name: localStorage.current_page,
-          public: localStorage.is_current_page_public == "true"
-        };
-      } else if (Object.keys(this.all_pages).length !== 0) {
-        default_page = { name: this.all_pages[0].title, public: true };
-      } else {
-        default_page = { name: "Build", public: true };
-      }
-      let page = (frappe.get_route()[1] == "private" ? frappe.get_route()[2] : frappe.get_route()[1]) || default_page.name;
-      let is_public = frappe.get_route()[1] ? frappe.get_route()[1] != "private" : default_page.public;
-      return { name: page, public: is_public };
-    }
-    update_selected_sidebar(page, add) {
-      let section = page.public ? "public" : "private";
-      if (this.sidebar && this.sidebar_items[section] && this.sidebar_items[section][page.name]) {
-        let $sidebar = this.sidebar_items[section][page.name];
-        let pages = page.public ? this.public_pages : this.private_pages;
-        let sidebar_page = pages.find((p) => p.title == page.name);
-        if (add) {
-          $sidebar[0].firstElementChild.classList.add("active");
-          if (sidebar_page)
-            sidebar_page.selected = true;
-          $sidebar.parent().hasClass("hidden") && $sidebar.parent().removeClass("hidden");
-          this.current_page = { name: page.name, public: page.public };
-          localStorage.current_page = page.name;
-          localStorage.is_current_page_public = page.public;
-        } else {
-          $sidebar[0].firstElementChild.classList.remove("selected");
-          if (sidebar_page)
-            sidebar_page.selected = false;
-        }
-      }
+      return navbar;
     }
     make() {
       this.bind_events();
@@ -11114,8 +11053,6 @@
     convert_to_standard_route(route) {
       let private_workspace = route[1] && `${route[1]}-${frappe.user.name.toLowerCase()}`;
       let custom_workspace = route[1];
-      console.log("this.routes[route[0]]", this.routes[route[0]]);
-      console.log("route[0]", route[0]);
       if (frappe.workspaces[route[0]]) {
         route = ["Workspaces", frappe.workspaces[route[0]].title];
       } else if (route[0] == "private" && frappe.workspaces[private_workspace]) {
@@ -11336,14 +11273,10 @@
         route = route.substr(1);
       if (route.substr(0, 1) == "!")
         route = route.substr(1);
-      console.log("strip_prefix_route", route);
       var workspace = route.split("/")[0];
-      console.log("workspace", workspace);
       var subPrefix = route.split("/").slice(1).join("/");
-      console.log("subPrefix", subPrefix);
-      var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form"];
+      var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form", "custom-field"];
       var routeFix = subPrefix != "" && !exceptPrefix.includes(workspace) ? subPrefix : route;
-      console.log("strip_prefix_routeFix", routeFix);
       var finalRoute = routeFix.startsWith("new") ? route : routeFix;
       return finalRoute;
     },
@@ -11475,7 +11408,6 @@
       });
     }
     sidebar_item_container(item) {
-      console.log("item sidebar", item);
       return $(`
 			<div class="sidebar-item-container" item-parent="${item.parent_menu}" item-name="${item.label}" item-public="${item.public || 0}">
 				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
@@ -11606,7 +11538,6 @@
       return frappe.call("frappe.desk.desktop.get_desktop_page", {
         page
       }).then((data) => {
-        console.log("get_data", data);
         this.page_data = data.message;
         this.pages[page.name] && delete this.pages[page.name];
         this.pages[page.name] = data.message;
@@ -12490,4 +12421,4 @@
   };
 })();
 /*! For license information please see editor.js.LICENSE.txt */
-//# sourceMappingURL=visualize.bundle.I5ALWDGQ.js.map
+//# sourceMappingURL=visualize.bundle.27A7T3VH.js.map
