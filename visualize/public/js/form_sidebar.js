@@ -10,14 +10,10 @@ frappe.ui.form.Sidebar = class {
 	constructor(opts) {
 		$.extend(this, opts);
 		this.pathname = window.location.pathname.split("/")[2];
+		this.make();
 	}
 
 	async make() {
-		// var sidebar_content = frappe.render_template("form_sidebar", {
-		// 	doctype: this.frm.doctype,
-		// 	frm: this.frm,
-		// });
-
 		let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
 		this.tempData = sidebar_menu.pages;
 
@@ -56,11 +52,6 @@ frappe.ui.form.Sidebar = class {
 		// this.setup_menu();
 	}
 
-	async setup_menu() {
-		let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
-		this.tempData = sidebar_menu.pages;
-	}
-
 	get_pages_menu(workspace) {
 		return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
 			workspace_name: workspace ? workspace : "Home"
@@ -68,7 +59,6 @@ frappe.ui.form.Sidebar = class {
 	}
 
 	async setup_sidebar_menu() {
-		// this.prepare_container();
 		let data = await this.get_pages_menu(this.pathname);
 		this.make_sidebar(data.pages);
 	}

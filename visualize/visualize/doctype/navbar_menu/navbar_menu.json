@@ -8,7 +8,7 @@
   "type",
   "label",
   "icon",
-  "hidden",
+  "public",
   "parent_menu",
   "link_type",
   "link_to"
@@ -38,13 +38,6 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.type == \"Card Break\"",
-   "fieldname": "hidden",
-   "fieldtype": "Check",
-   "label": "Hidden"
-  },
-  {
-   "default": "0",
    "depends_on": "eval:doc.type == \"Link\"",
    "fieldname": "parent_menu",
    "fieldtype": "Int",
@@ -57,7 +50,7 @@
    "in_list_view": 1,
    "label": "Link Type",
    "mandatory_depends_on": "eval:doc.type==\"Link\"",
-   "options": "Module Def\nWorkspace\nDocType\nPage\nReport",
+   "options": "Workspace\nDocType\nPage\nReport",
    "read_only_depends_on": "eval:doc.type!=\"Link\""
   },
   {
@@ -68,11 +61,18 @@
    "mandatory_depends_on": "eval:doc.type==\"Link\"",
    "options": "link_type",
    "read_only_depends_on": "eval:doc.type!=\"Link\""
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.type == \"Card Break\"",
+   "fieldname": "public",
+   "fieldtype": "Check",
+   "label": "Public"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-08-30 11:08:13.256305",
+ "modified": "2022-09-04 22:58:34.755296",
  "modified_by": "Administrator",
  "module": "Visualize",
  "name": "Navbar Menu",

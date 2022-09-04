@@ -16,7 +16,6 @@ frappe.views.ListSidebar = class ListSidebar {
 	}
 
 	async make() {
-		// var sidebar_content = frappe.render_template("list_sidebar", { doctype: this.doctype });
 		let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
 		this.tempData = sidebar_menu.pages;
 

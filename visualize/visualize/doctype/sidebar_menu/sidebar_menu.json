@@ -51,7 +51,7 @@
    "in_list_view": 1,
    "label": "Link Type",
    "mandatory_depends_on": "eval:doc.type==\"Link\"",
-   "options": "Module Def\nWorkspace\nDocType\nPage\nReport",
+   "options": "Workspace\nDocType\nPage\nReport",
    "read_only_depends_on": "eval:doc.type!=\"Link\""
   },
   {
@@ -87,7 +87,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-08-31 09:39:49.692298",
+ "modified": "2022-09-04 22:54:20.157278",
  "modified_by": "Administrator",
  "module": "Visualize",
  "name": "Sidebar Menu",

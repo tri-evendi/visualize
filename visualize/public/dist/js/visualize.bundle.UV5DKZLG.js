@@ -10382,6 +10382,7 @@
     constructor(opts) {
       $.extend(this, opts);
       this.pathname = window.location.pathname.split("/")[2];
+      this.make();
     }
     async make() {
       let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
@@ -10393,10 +10394,6 @@
 		`).appendTo(this.page.sidebar.empty());
       this.sidebar = list_sidebar.find(".desk-sidebar");
       this.setup_sidebar_menu();
-    }
-    async setup_menu() {
-      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
-      this.tempData = sidebar_menu.pages;
     }
     get_pages_menu(workspace) {
       return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
@@ -12421,4 +12418,4 @@
   };
 })();
 /*! For license information please see editor.js.LICENSE.txt */
-//# sourceMappingURL=visualize.bundle.27A7T3VH.js.map
+//# sourceMappingURL=visualize.bundle.UV5DKZLG.js.map
