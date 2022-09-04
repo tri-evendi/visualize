@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../../../../../../../var/folders/3p/_f8zwcgx3y59g35j51ppdfgr0000gp/T/tmp-7153-CCsHTENb0Eip/visualize/visualize/public/scss/visualize.bundle.css"],
+  "sourcesContent": [".layout-main .layout-side-section .page-head, .layout-main .layout-main-section-wrapper .page-head, .layout-main .no-wrapper .page-head {\n  top: -25px !important;\n}"],
+  "mappings": ";AAAA;AAAA;AAAA;AACE;AAAA;",
+  "names": []
+}

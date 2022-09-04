@@ -6,6 +6,7 @@ app_publisher = "Tri Evendi"
 app_description = "Display Setting System"
 app_email = "evendyx@gmail.com"
 app_license = "MIT"
+required_apps = ["frappe", "erpnext"]
 
 # Includes in <head>
 # ------------------

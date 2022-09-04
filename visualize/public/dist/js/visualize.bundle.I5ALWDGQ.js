@@ -10127,6 +10127,560 @@
     }
   });
 
+  // ../visualize/visualize/public/js/list_sidebar.js
+  frappe.provide("frappe.views");
+  frappe.views.ListSidebar = class ListSidebar {
+    constructor(opts) {
+      $.extend(this, opts);
+      this.pathname = window.location.pathname.split("/")[2];
+      this.make();
+    }
+    async make() {
+      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
+      this.tempData = sidebar_menu.pages;
+      let list_sidebar = $(`
+			<div class="list-sidebar overlay-sidebar hidden-xs hidden-sm">
+				<div class="desk-sidebar list-unstyled sidebar-menu"></div>
+			</div>
+		`).appendTo(this.page.sidebar.empty());
+      this.sidebar = list_sidebar.find(".desk-sidebar");
+      $(document).trigger("list_sidebar_setup");
+      this.setup_sidebar_menu();
+    }
+    async setup_menu() {
+      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
+      this.tempData = sidebar_menu.pages;
+    }
+    get_pages_menu(workspace) {
+      return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
+        workspace_name: workspace ? workspace : "Home"
+      });
+    }
+    async setup_menu() {
+      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
+      this.tempData = sidebar_menu.pages;
+    }
+    get_pages_menu(workspace) {
+      return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
+        workspace_name: workspace ? workspace : "Home"
+      });
+    }
+    async setup_sidebar_menu() {
+      let data = await this.get_pages_menu(this.pathname);
+      this.make_sidebar(data.pages);
+    }
+    make_sidebar(all_menu) {
+      if (this.sidebar.find(".standard-sidebar-section")[0]) {
+        this.sidebar.find(".standard-sidebar-section").remove();
+      }
+      let parent_menu = all_menu.filter((page) => page.parent_menu === 0);
+      parent_menu.forEach((parent) => {
+        let root_pages = all_menu.filter((page) => page.parent_menu === parent.idx);
+        this.build_sidebar_section(parent.label, root_pages);
+      });
+      this.sidebar.find(".selected").length && !frappe.dom.is_element_in_viewport(this.sidebar.find(".selected")) && this.sidebar.find(".selected")[0].scrollIntoView();
+    }
+    prepare_sidebar(items, child_container, item_container) {
+      items.forEach((item) => this.append_item(item, child_container));
+      child_container.appendTo(item_container);
+    }
+    append_item(item, container) {
+      let is_current_page = "";
+      item.selected = is_current_page;
+      if (is_current_page) {
+        this.current_page = { name: item.label, public: item.public };
+      }
+      let $item_container = this.sidebar_item_container(item);
+      let sidebar_control = $item_container.find(".sidebar-item-control");
+      let pages = item.public ? this.tempData : this.private_pages_menu;
+      let child_items = pages.filter((page) => page.parent_menu == item.label);
+      if (child_items.length > 0) {
+        let child_container = $item_container.find(".sidebar-child-item");
+        child_container.addClass("hidden");
+        this.prepare_sidebar(child_items, child_container, $item_container);
+      }
+      $item_container.appendTo(container);
+      if ($item_container.parent().hasClass("hidden") && is_current_page) {
+        $item_container.parent().toggleClass("hidden");
+      }
+    }
+    add_drop_icon(item, sidebar_control, item_container) {
+      let drop_icon = "small-down";
+      if (item_container.find(`[item-name="${this.current_page.name}"]`).length) {
+        drop_icon = "small-up";
+      }
+      let $child_item_section = item_container.find(".sidebar-child-item");
+      let $drop_icon = $(`<span class="drop-icon hidden">${frappe.utils.icon(drop_icon, "sm")}</span>`).appendTo(sidebar_control);
+      let pages = item.public ? this.public_pages : this.private_pages;
+      if (pages.some((e) => e.parent_page == item.title)) {
+        $drop_icon.removeClass("hidden");
+      }
+      $drop_icon.on("click", () => {
+        let icon = $drop_icon.find("use").attr("href") === "#icon-small-down" ? "#icon-small-up" : "#icon-small-down";
+        $drop_icon.find("use").attr("href", icon);
+        $child_item_section.toggleClass("hidden");
+      });
+    }
+    sidebar_item_container(item) {
+      return $(`
+			<div class="sidebar-item-container" item-parent="${item.parent_menu}" item-name="${item.label}" item-public="${item.public || 0}">
+				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
+					<a
+						href="/app/${frappe.router.slug(item.workspace_name)}/${frappe.router.slug(item.link_to)}"
+						class="item-anchor block-click"}" title="${__(item.label)}"
+					>
+						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(item.icon || "folder-normal", "md")}</span>
+						<span class="sidebar-item-label">${__(item.label)}<span>
+					</a>
+					<div class="sidebar-item-control"></div>
+				</div>
+				<div class="sidebar-child-item nested-container"></div>
+			</div>
+		`);
+    }
+    build_sidebar_section(title, root_pages) {
+      let sidebar_section = $(`<div class="standard-sidebar-section nested-container" data-title="${title}"></div>`);
+      let $title = $(`<div class="standard-sidebar-label">
+			<span>${frappe.utils.icon("small-down", "xs")}</span>
+			<span class="section-title">${__(title)}<span>
+		</div>`).appendTo(sidebar_section);
+      this.prepare_sidebar(root_pages, sidebar_section, this.sidebar);
+      $title.on("click", (e) => {
+        let icon = $(e.target).find("span use").attr("href") === "#icon-small-down" ? "#icon-right" : "#icon-small-down";
+        $(e.target).find("span use").attr("href", icon);
+        $(e.target).parent().find(".sidebar-item-container").toggleClass("hidden");
+      });
+      if (Object.keys(root_pages).length === 0) {
+        sidebar_section.addClass("hidden");
+      }
+    }
+    setup_views() {
+      var show_list_link = false;
+      if (frappe.views.calendar[this.doctype]) {
+        this.sidebar.find('.list-link[data-view="Calendar"]').removeClass("hide");
+        this.sidebar.find('.list-link[data-view="Gantt"]').removeClass("hide");
+        show_list_link = true;
+      }
+      this.sidebar.find('.list-link[data-view="Kanban"]').removeClass("hide");
+      if (this.doctype === "Communication" && frappe.boot.email_accounts.length) {
+        this.sidebar.find('.list-link[data-view="Inbox"]').removeClass("hide");
+        show_list_link = true;
+      }
+      if (frappe.treeview_settings[this.doctype] || frappe.get_meta(this.doctype).is_tree) {
+        this.sidebar.find(".tree-link").removeClass("hide");
+      }
+      this.current_view = "List";
+      var route = frappe.get_route();
+      if (route.length > 2 && frappe.views.view_modes.includes(route[2])) {
+        this.current_view = route[2];
+        if (this.current_view === "Kanban") {
+          this.kanban_board = route[3];
+        } else if (this.current_view === "Inbox") {
+          this.email_account = route[3];
+        }
+      }
+      this.sidebar.find('.list-link[data-view="' + this.current_view + '"] a').attr("disabled", "disabled").addClass("disabled");
+      this.sidebar.find('.list-link[data-view="Kanban"] a, .list-link[data-view="Inbox"] a').attr("disabled", null).removeClass("disabled");
+      if (this.list_view.meta.image_field) {
+        this.sidebar.find('.list-link[data-view="Image"]').removeClass("hide");
+        show_list_link = true;
+      }
+      if (this.list_view.settings.get_coords_method || this.list_view.meta.fields.find((i) => i.fieldname === "latitude") && this.list_view.meta.fields.find((i) => i.fieldname === "longitude") || this.list_view.meta.fields.find((i) => i.fieldname === "location" && i.fieldtype == "Geolocation")) {
+        this.sidebar.find('.list-link[data-view="Map"]').removeClass("hide");
+        show_list_link = true;
+      }
+      if (show_list_link) {
+        this.sidebar.find('.list-link[data-view="List"]').removeClass("hide");
+      }
+    }
+    setup_reports() {
+      var me = this;
+      var added = [];
+      var dropdown = this.page.sidebar.find(".reports-dropdown");
+      var divider = false;
+      var add_reports = function(reports2) {
+        $.each(reports2, function(name, r) {
+          if (!r.ref_doctype || r.ref_doctype == me.doctype) {
+            var report_type = r.report_type === "Report Builder" ? `List/${r.ref_doctype}/Report` : "query-report";
+            var route = r.route || report_type + "/" + (r.title || r.name);
+            if (added.indexOf(route) === -1) {
+              added.push(route);
+              if (!divider) {
+                me.get_divider().appendTo(dropdown);
+                divider = true;
+              }
+              $('<li><a href="#' + route + '">' + __(r.title || r.name) + "</a></li>").appendTo(dropdown);
+            }
+          }
+        });
+      };
+      if (this.list_view.settings.reports) {
+        add_reports(this.list_view.settings.reports);
+      }
+      var reports = Object.values(frappe.boot.user.all_reports).sort((a, b) => a.title.localeCompare(b.title)) || [];
+      add_reports(reports);
+    }
+    setup_list_filter() {
+      this.list_filter = new ListFilter({
+        wrapper: this.page.sidebar.find(".list-filters"),
+        doctype: this.doctype,
+        list_view: this.list_view
+      });
+    }
+    setup_kanban_boards() {
+      const $dropdown = this.page.sidebar.find(".kanban-dropdown");
+      frappe.views.KanbanView.setup_dropdown_in_sidebar(this.doctype, $dropdown);
+    }
+    setup_keyboard_shortcuts() {
+      this.sidebar.find(".list-link > a, .list-link > .btn-group > a").each((i, el) => {
+        frappe.ui.keys.get_shortcut_group(this.page).add($(el));
+      });
+    }
+    setup_list_group_by() {
+      this.list_group_by = new frappe.views.ListGroupBy({
+        doctype: this.doctype,
+        sidebar: this,
+        list_view: this.list_view,
+        page: this.page
+      });
+    }
+    get_stats() {
+      var me = this;
+      frappe.call({
+        method: "frappe.desk.reportview.get_sidebar_stats",
+        type: "GET",
+        args: {
+          stats: me.stats,
+          doctype: me.doctype,
+          filters: (me.list_view.filter_area ? me.list_view.get_filters_for_args() : me.default_filters) || []
+        },
+        callback: function(r) {
+          let stats = (r.message.stats || {})["_user_tags"] || [];
+          me.render_stat(stats);
+          let stats_dropdown = me.sidebar.find(".list-stats-dropdown");
+          frappe.utils.setup_search(stats_dropdown, ".stat-link", ".stat-label");
+        }
+      });
+    }
+    render_stat(stats) {
+      let args = {
+        stats,
+        label: __("Tags")
+      };
+      let tag_list = $(frappe.render_template("list_sidebar_stat", args)).on("click", ".stat-link", (e) => {
+        let fieldname = $(e.currentTarget).attr("data-field");
+        let label = $(e.currentTarget).attr("data-label");
+        let condition = "like";
+        let existing = this.list_view.filter_area.filter_list.get_filter(fieldname);
+        if (existing) {
+          existing.remove();
+        }
+        if (label == "No Tags") {
+          label = "%,%";
+          condition = "not like";
+        }
+        this.list_view.filter_area.add(this.doctype, fieldname, condition, label);
+      });
+      this.sidebar.find(".list-stats-dropdown .stat-result").html(tag_list);
+    }
+    reload_stats() {
+      this.sidebar.find(".stat-link").remove();
+      this.sidebar.find(".stat-no-records").remove();
+      this.get_stats();
+    }
+  };
+
+  // ../visualize/visualize/public/js/form_sidebar.js
+  frappe.ui.form.Sidebar = class {
+    constructor(opts) {
+      $.extend(this, opts);
+      this.pathname = window.location.pathname.split("/")[2];
+    }
+    async make() {
+      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
+      this.tempData = sidebar_menu.pages;
+      let list_sidebar = $(`
+			<div class="list-sidebar overlay-sidebar hidden-xs hidden-sm">
+				<div class="desk-sidebar list-unstyled sidebar-menu"></div>
+			</div>
+		`).appendTo(this.page.sidebar.empty());
+      this.sidebar = list_sidebar.find(".desk-sidebar");
+      this.setup_sidebar_menu();
+    }
+    async setup_menu() {
+      let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
+      this.tempData = sidebar_menu.pages;
+    }
+    get_pages_menu(workspace) {
+      return frappe.xcall("visualize.overrides.desktop.get_sidebar_items", {
+        workspace_name: workspace ? workspace : "Home"
+      });
+    }
+    async setup_sidebar_menu() {
+      let data = await this.get_pages_menu(this.pathname);
+      this.make_sidebar(data.pages);
+    }
+    make_sidebar(all_menu) {
+      if (this.sidebar.find(".standard-sidebar-section")[0]) {
+        this.sidebar.find(".standard-sidebar-section").remove();
+      }
+      let parent_menu = all_menu.filter((page) => page.parent_menu === 0);
+      parent_menu.forEach((parent) => {
+        let root_pages = all_menu.filter((page) => page.parent_menu === parent.idx);
+        this.build_sidebar_section(parent.label, root_pages);
+      });
+      this.sidebar.find(".selected").length && !frappe.dom.is_element_in_viewport(this.sidebar.find(".selected")) && this.sidebar.find(".selected")[0].scrollIntoView();
+    }
+    prepare_sidebar(items, child_container, item_container) {
+      items.forEach((item) => this.append_item(item, child_container));
+      child_container.appendTo(item_container);
+    }
+    append_item(item, container) {
+      let is_current_page = "";
+      item.selected = is_current_page;
+      if (is_current_page) {
+        this.current_page = { name: item.label, public: item.public };
+      }
+      let $item_container = this.sidebar_item_container(item);
+      let sidebar_control = $item_container.find(".sidebar-item-control");
+      let pages = item.public ? this.tempData : this.private_pages_menu;
+      let child_items = pages.filter((page) => page.parent_menu == item.label);
+      if (child_items.length > 0) {
+        let child_container = $item_container.find(".sidebar-child-item");
+        child_container.addClass("hidden");
+        this.prepare_sidebar(child_items, child_container, $item_container);
+      }
+      $item_container.appendTo(container);
+      if ($item_container.parent().hasClass("hidden") && is_current_page) {
+        $item_container.parent().toggleClass("hidden");
+      }
+    }
+    add_drop_icon(item, sidebar_control, item_container) {
+      let drop_icon = "small-down";
+      if (item_container.find(`[item-name="${this.current_page.name}"]`).length) {
+        drop_icon = "small-up";
+      }
+      let $child_item_section = item_container.find(".sidebar-child-item");
+      let $drop_icon = $(`<span class="drop-icon hidden">${frappe.utils.icon(drop_icon, "sm")}</span>`).appendTo(sidebar_control);
+      let pages = item.public ? this.public_pages : this.private_pages;
+      if (pages.some((e) => e.parent_page == item.title)) {
+        $drop_icon.removeClass("hidden");
+      }
+      $drop_icon.on("click", () => {
+        let icon = $drop_icon.find("use").attr("href") === "#icon-small-down" ? "#icon-small-up" : "#icon-small-down";
+        $drop_icon.find("use").attr("href", icon);
+        $child_item_section.toggleClass("hidden");
+      });
+    }
+    sidebar_item_container(item) {
+      return $(`
+			<div class="sidebar-item-container" item-parent="${item.parent_menu}" item-name="${item.label}" item-public="${item.public || 0}">
+				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
+					<a
+						href="/app/${frappe.router.slug(item.workspace_name)}/${frappe.router.slug(item.link_to)}"
+						class="item-anchor block-click"}" title="${__(item.label)}"
+					>
+						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(item.icon || "folder-normal", "md")}</span>
+						<span class="sidebar-item-label">${__(item.label)}<span>
+					</a>
+					<div class="sidebar-item-control"></div>
+				</div>
+				<div class="sidebar-child-item nested-container"></div>
+			</div>
+		`);
+    }
+    build_sidebar_section(title, root_pages) {
+      let sidebar_section = $(`<div class="standard-sidebar-section nested-container" data-title="${title}"></div>`);
+      let $title = $(`<div class="standard-sidebar-label">
+			<span>${frappe.utils.icon("small-down", "xs")}</span>
+			<span class="section-title">${__(title)}<span>
+		</div>`).appendTo(sidebar_section);
+      this.prepare_sidebar(root_pages, sidebar_section, this.sidebar);
+      $title.on("click", (e) => {
+        let icon = $(e.target).find("span use").attr("href") === "#icon-small-down" ? "#icon-right" : "#icon-small-down";
+        $(e.target).find("span use").attr("href", icon);
+        $(e.target).parent().find(".sidebar-item-container").toggleClass("hidden");
+      });
+      if (Object.keys(root_pages).length === 0) {
+        sidebar_section.addClass("hidden");
+      }
+    }
+    bind_events() {
+      var me = this;
+      this.comments.on("click", function() {
+        frappe.utils.scroll_to(me.frm.footer.wrapper.find(".comment-box"), true);
+      });
+      this.like_icon.on("click", function() {
+        frappe.ui.toggle_like(me.like_wrapper, me.frm.doctype, me.frm.doc.name, function() {
+          me.refresh_like();
+        });
+      });
+    }
+    setup_keyboard_shortcuts() {
+      let assignment_link = this.sidebar.find(".add-assignment");
+      frappe.ui.keys.get_shortcut_group(this.page).add(assignment_link);
+    }
+    refresh() {
+      if (this.frm.doc.__islocal) {
+        this.sidebar.toggle(false);
+      } else {
+        this.sidebar.toggle(true);
+        this.frm.assign_to.refresh();
+        this.frm.attachments.refresh();
+        this.frm.shared.refresh();
+        this.frm.tags && this.frm.tags.refresh(this.frm.get_docinfo().tags);
+        if (this.frm.doc.route && cint(frappe.boot.website_tracking_enabled)) {
+          let route = this.frm.doc.route;
+          frappe.utils.get_page_view_count(route).then((res) => {
+            this.sidebar.find(".pageview-count").html(__("{0} Page Views", [String(res.message).bold()]));
+          });
+        }
+        this.sidebar.find(".modified-by").html(__("{0} edited this {1}", [
+          frappe.user.full_name(this.frm.doc.modified_by).bold(),
+          "<br>" + comment_when(this.frm.doc.modified)
+        ], "For example, 'Jon Doe edited this 5 minutes ago'."));
+        this.sidebar.find(".created-by").html(__("{0} created this {1}", [
+          frappe.user.full_name(this.frm.doc.owner).bold(),
+          "<br>" + comment_when(this.frm.doc.creation)
+        ], "For example, 'Jon Doe created this 5 minutes ago'."));
+        this.refresh_like();
+        this.refresh_follow();
+        this.refresh_comments_count();
+        frappe.ui.form.set_user_image(this.frm);
+      }
+    }
+    show_auto_repeat_status() {
+      if (this.frm.meta.allow_auto_repeat && this.frm.doc.auto_repeat) {
+        const me = this;
+        frappe.call({
+          method: "frappe.client.get_value",
+          args: {
+            doctype: "Auto Repeat",
+            filters: {
+              name: this.frm.doc.auto_repeat
+            },
+            fieldname: ["frequency"]
+          },
+          callback: function(res) {
+            me.sidebar.find(".auto-repeat-status").html(__("Repeats {0}", [res.message.frequency]));
+            me.sidebar.find(".auto-repeat-status").on("click", function() {
+              frappe.set_route("Form", "Auto Repeat", me.frm.doc.auto_repeat);
+            });
+          }
+        });
+      }
+    }
+    make_tags() {
+      if (this.frm.meta.issingle) {
+        this.sidebar.find(".form-tags").toggle(false);
+        return;
+      }
+      let tags_parent = this.sidebar.find(".form-tags");
+      this.frm.tags = new frappe.ui.TagEditor({
+        parent: tags_parent,
+        add_button: tags_parent.find(".add-tags-btn"),
+        frm: this.frm,
+        on_change: function(user_tags) {
+          this.frm.tags && this.frm.tags.refresh(user_tags);
+        }
+      });
+    }
+    make_attachments() {
+      var me = this;
+      this.frm.attachments = new frappe.ui.form.Attachments({
+        parent: me.sidebar.find(".form-attachments"),
+        frm: me.frm
+      });
+    }
+    make_assignments() {
+      this.frm.assign_to = new frappe.ui.form.AssignTo({
+        parent: this.sidebar.find(".form-assignments"),
+        frm: this.frm
+      });
+    }
+    make_shared() {
+      this.frm.shared = new frappe.ui.form.Share({
+        frm: this.frm,
+        parent: this.sidebar.find(".form-shared")
+      });
+    }
+    add_user_action(label, click) {
+      return $("<a>").html(label).appendTo($('<li class="user-action-row">').appendTo(this.user_actions.removeClass("hidden"))).on("click", click);
+    }
+    clear_user_actions() {
+      this.user_actions.addClass("hidden");
+      this.user_actions.find(".user-action-row").remove();
+    }
+    make_like() {
+      this.like_wrapper = this.sidebar.find(".liked-by");
+      this.like_icon = this.sidebar.find(".liked-by .like-icon");
+      this.like_count = this.sidebar.find(".liked-by .like-count");
+      frappe.ui.setup_like_popover(this.sidebar.find(".form-stats-likes"), ".like-icon");
+    }
+    make_follow() {
+      this.follow_button = this.sidebar.find(".form-sidebar-stats .form-follow");
+      this.follow_button.on("click", () => {
+        let is_followed = this.frm.get_docinfo().is_document_followed;
+        frappe.call("frappe.desk.form.document_follow.update_follow", {
+          doctype: this.frm.doctype,
+          doc_name: this.frm.doc.name,
+          following: !is_followed
+        }).then(() => {
+          frappe.model.set_docinfo(this.frm.doctype, this.frm.doc.name, "is_document_followed", !is_followed);
+          this.refresh_follow(!is_followed);
+        });
+      });
+    }
+    refresh_follow(follow) {
+      if (follow == null) {
+        follow = this.frm.get_docinfo().is_document_followed;
+      }
+      this.follow_button.text(follow ? __("Unfollow") : __("Follow"));
+    }
+    refresh_like() {
+      if (!this.like_icon) {
+        return;
+      }
+      this.like_wrapper.attr("data-liked-by", this.frm.doc._liked_by);
+      const liked = frappe.ui.is_liked(this.frm.doc);
+      this.like_wrapper.toggleClass("not-liked", !liked).toggleClass("liked", liked).attr("data-doctype", this.frm.doctype).attr("data-name", this.frm.doc.name);
+      this.like_count && this.like_count.text(JSON.parse(this.frm.doc._liked_by || "[]").length);
+    }
+    refresh_comments_count() {
+      let count = (this.frm.get_docinfo().comments || []).length;
+      this.comments.find(".comments-count").html(count);
+    }
+    refresh_image() {
+    }
+    make_review() {
+      const review_wrapper = this.sidebar.find(".form-reviews");
+      if (frappe.boot.energy_points_enabled && !this.frm.is_new()) {
+        this.frm.reviews = new frappe.ui.form.Review({
+          parent: review_wrapper,
+          frm: this.frm
+        });
+      } else {
+        review_wrapper.remove();
+      }
+    }
+    reload_docinfo(callback) {
+      frappe.call({
+        method: "frappe.desk.form.load.get_docinfo",
+        args: {
+          doctype: this.frm.doctype,
+          name: this.frm.docname
+        },
+        callback: (r) => {
+          if (callback)
+            callback(r.docinfo);
+          this.frm.timeline && this.frm.timeline.refresh();
+          this.frm.assign_to.refresh();
+          this.frm.attachments.refresh();
+        }
+      });
+    }
+  };
+
   // ../visualize/visualize/public/js/navbar.js
   frappe.provide("frappe.ui.toolbar");
   frappe.provide("frappe.search");
@@ -10151,7 +10705,7 @@
       this.all_pages.forEach((page) => {
         page.is_editable = !page.public || this.has_access;
       });
-      this.public_pages = this.all_pages.filter((page) => page.public);
+      this.public_pages = this.all_pages.filter((page) => page.public).slice(0, 7);
       this.private_pages = this.all_pages.filter((page) => !page.public);
       if (this.all_pages) {
         frappe.workspaces = {};
@@ -10450,7 +11004,402 @@
     });
   };
 
-  // ../visualize/visualize/public/js/sidebar.js
+  // ../visualize/visualize/public/js/router.js
+  frappe.provide("frappe.views");
+  frappe.re_route = { "#login": "" };
+  frappe.route_titles = {};
+  frappe.route_flags = {};
+  frappe.route_history = [];
+  frappe.view_factory = {};
+  frappe.view_factories = [];
+  frappe.route_options = null;
+  frappe.route_hooks = {};
+  $(window).on("hashchange", function(e) {
+    if (window.location.hash && !frappe.router.is_app_route(e.currentTarget.pathname)) {
+      let sub_path = frappe.router.get_sub_path(window.location.hash);
+      frappe.router.push_state(sub_path);
+      return false;
+    }
+  });
+  window.addEventListener("popstate", (e) => {
+    frappe.router.route();
+    e.preventDefault();
+    return false;
+  });
+  $("body").on("click", "a", function(e) {
+    let override = (route) => {
+      e.preventDefault();
+      frappe.set_route(route);
+      return false;
+    };
+    const href = e.currentTarget.getAttribute("href");
+    if (e.currentTarget.getAttribute("onclick") || e.ctrlKey || e.metaKey || href === "#") {
+      return;
+    }
+    if (href === "") {
+      return override("/app");
+    }
+    if (href && href.startsWith("#")) {
+      return override(e.currentTarget.hash);
+    }
+    if (frappe.router.is_app_route(e.currentTarget.pathname)) {
+      if (e.currentTarget.search) {
+        frappe.route_options = {};
+        let params = new URLSearchParams(e.currentTarget.search);
+        for (const [key, value] of params) {
+          frappe.route_options[key] = value;
+        }
+      }
+      return override(e.currentTarget.pathname + e.currentTarget.hash);
+    }
+  });
+  frappe.router = {
+    current_route: null,
+    routes: {},
+    factory_views: ["form", "list", "report", "tree", "print", "dashboard"],
+    list_views: [
+      "list",
+      "kanban",
+      "report",
+      "calendar",
+      "tree",
+      "gantt",
+      "dashboard",
+      "image",
+      "inbox"
+    ],
+    layout_mapped: {},
+    is_app_route(path) {
+      if (path.substr(0, 1) === "/")
+        path = path.substr(1);
+      path = path.split("/");
+      if (path[0]) {
+        return path[0] === "app";
+      }
+    },
+    setup() {
+      for (let doctype of frappe.boot.user.can_read) {
+        this.routes[this.slug(doctype)] = { doctype };
+      }
+      if (frappe.boot.doctype_layouts) {
+        for (let doctype_layout of frappe.boot.doctype_layouts) {
+          this.routes[this.slug(doctype_layout.name)] = {
+            doctype: doctype_layout.document_type,
+            doctype_layout: doctype_layout.name
+          };
+        }
+      }
+    },
+    route() {
+      if (!frappe.app)
+        return;
+      let sub_path = this.get_sub_path();
+      if (this.re_route(sub_path))
+        return;
+      this.current_sub_path = sub_path;
+      this.current_route = this.parse();
+      this.set_history(sub_path);
+      this.render();
+      this.set_title(sub_path);
+      this.trigger("change");
+    },
+    parse(route) {
+      route = this.get_sub_path_string(route).split("/");
+      if (!route)
+        return [];
+      route = $.map(route, this.decode_component);
+      this.set_route_options_from_url();
+      return this.convert_to_standard_route(route);
+    },
+    convert_to_standard_route(route) {
+      let private_workspace = route[1] && `${route[1]}-${frappe.user.name.toLowerCase()}`;
+      let custom_workspace = route[1];
+      console.log("this.routes[route[0]]", this.routes[route[0]]);
+      console.log("route[0]", route[0]);
+      if (frappe.workspaces[route[0]]) {
+        route = ["Workspaces", frappe.workspaces[route[0]].title];
+      } else if (route[0] == "private" && frappe.workspaces[private_workspace]) {
+        route = ["Workspaces", "private", frappe.workspaces[private_workspace].title];
+      } else if (route[0] != void 0 && frappe.workspaces[custom_workspace] != void 0) {
+        route = this.set_custom_route(route);
+      } else if (this.routes[route[0]]) {
+        route = this.set_doctype_route(route);
+      }
+      return route;
+    },
+    doctype_route_exist(route) {
+      route = this.get_sub_path_string(route).split("/");
+      return this.routes[route[0]];
+    },
+    set_doctype_route(route) {
+      let doctype_route = this.routes[route[0]];
+      if (route[1]) {
+        if (route[2] && route[1] === "view") {
+          route = this.get_standard_route_for_list(route, doctype_route);
+        } else {
+          let docname = route[1];
+          if (route.length > 2) {
+            docname = route.slice(1).join("/");
+          }
+          route = ["Form", doctype_route.doctype, docname];
+        }
+      } else if (frappe.model.is_single(doctype_route.doctype)) {
+        route = ["Form", doctype_route.doctype, doctype_route.doctype];
+      } else {
+        route = ["List", doctype_route.doctype, "List"];
+      }
+      if (doctype_route.doctype_layout) {
+        this.doctype_layout = doctype_route.doctype_layout;
+      }
+      return route;
+    },
+    set_custom_route(route) {
+      let custom_workspace = this.routes[route[0]];
+      let doctype = this.routes[route[1]];
+      if (route[2]) {
+        if (route[3] && route[2] === "view") {
+          route = this.get_standard_route_for_list(route, doctype);
+        } else {
+          let docname = route[2];
+          if (route.length > 3) {
+            docname = route.slice(2).join("/");
+          }
+          route = ["Form", doctype.doctype, docname];
+        }
+      } else if (frappe.model.is_single(doctype.doctype)) {
+        route = ["Form", doctype.doctype, doctype.doctype];
+      } else {
+        route = ["List", doctype.doctype, "List"];
+      }
+      if (custom_workspace.doctype_layout) {
+        this.doctype_layout = custom_workspace.doctype_layout;
+      }
+      return route;
+    },
+    get_standard_route_for_list(route, doctype_route) {
+      let standard_route;
+      if (route[2].toLowerCase() === "tree") {
+        standard_route = ["Tree", doctype_route.doctype];
+      } else {
+        standard_route = ["List", doctype_route.doctype, frappe.utils.to_title_case(route[2])];
+        if (route[3])
+          standard_route.push(...route.slice(3, route.length));
+      }
+      return standard_route;
+    },
+    set_history() {
+      frappe.route_history.push(this.current_route);
+      frappe.ui.hide_open_dialog();
+    },
+    render() {
+      if (this.current_route[0]) {
+        this.render_page();
+      } else {
+        frappe.views.pageview.show("");
+      }
+    },
+    render_page() {
+      const route = this.current_route;
+      const factory = frappe.utils.to_title_case(route[0]);
+      if (route[1] && frappe.views[factory + "Factory"]) {
+        route[0] = factory;
+        if (!frappe.view_factory[factory]) {
+          frappe.view_factory[factory] = new frappe.views[factory + "Factory"]();
+        }
+        frappe.view_factory[factory].show();
+      } else {
+        const route_name = frappe.utils.xss_sanitise(route[0]);
+        if (frappe.views.pageview) {
+          frappe.views.pageview.show(route_name);
+        }
+      }
+    },
+    re_route(sub_path) {
+      if (frappe.re_route[sub_path] !== void 0) {
+        const re_route_val = this.get_sub_path(frappe.re_route[sub_path]);
+        if (re_route_val === this.current_sub_path) {
+          window.history.back();
+        } else {
+          frappe.set_route(re_route_val);
+        }
+        return true;
+      }
+    },
+    set_title(sub_path) {
+      if (frappe.route_titles[sub_path]) {
+        frappe.utils.set_title(frappe.route_titles[sub_path]);
+      }
+    },
+    set_route() {
+      let route = Array.from(arguments);
+      return new Promise((resolve) => {
+        route = this.get_route_from_arguments(route);
+        route = this.convert_from_standard_route(route);
+        let sub_path = this.make_url(route);
+        this.push_state(sub_path);
+        setTimeout(() => {
+          frappe.after_ajax && frappe.after_ajax(() => {
+            resolve();
+          });
+        }, 100);
+      }).finally(() => frappe.route_flags = {});
+    },
+    get_route_from_arguments(route) {
+      if (route.length === 1 && $.isArray(route[0])) {
+        route = route[0];
+      }
+      if (route.length === 1 && route[0] && route[0].includes("/")) {
+        route = $.map(route[0].split("/"), this.decode_component);
+      }
+      if (route && route[0] == "") {
+        route.shift();
+      }
+      if (route && ["desk", "app"].includes(route[0])) {
+        route.shift();
+      }
+      return route;
+    },
+    convert_from_standard_route(route) {
+      const view = route[0] ? route[0].toLowerCase() : "";
+      let new_route = route;
+      if (view === "list") {
+        if (route[2] && route[2] !== "list" && !$.isPlainObject(route[2])) {
+          new_route = [this.slug(route[1]), "view", route[2].toLowerCase()];
+          if (route[3])
+            new_route.push(...route.slice(3, route.length));
+        } else {
+          if ($.isPlainObject(route[2])) {
+            frappe.route_options = route[2];
+          }
+          new_route = [this.slug(route[1])];
+        }
+      } else if (view === "form") {
+        new_route = [this.slug(route[1])];
+        if (route[2]) {
+          new_route.push(route[2]);
+        }
+      } else if (view === "tree") {
+        new_route = [this.slug(route[1]), "view", "tree"];
+      }
+      return new_route;
+    },
+    slug_parts(route) {
+      if (route[0] && this.factory_views.includes(route[0].toLowerCase())) {
+        route[0] = route[0].toLowerCase();
+        route[1] = this.slug(route[1]);
+      }
+      return route;
+    },
+    make_url(params) {
+      let path_string = $.map(params, function(a) {
+        if ($.isPlainObject(a)) {
+          frappe.route_options = a;
+          return null;
+        } else {
+          a = String(a);
+          if (a && a.match(/[%'"#\s\t]/)) {
+            a = encodeURIComponent(a);
+          }
+          return a;
+        }
+      }).join("/");
+      let private_home = frappe.workspaces[`home-${frappe.user.name.toLowerCase()}`];
+      let default_page = private_home ? "private/home" : frappe.workspaces["home"] ? "home" : Object.keys(frappe.workspaces)[0];
+      return "/app/" + (path_string || default_page);
+    },
+    push_state(url) {
+      if (window.location.pathname !== url) {
+        const method = frappe.route_flags.replace_route ? "replaceState" : "pushState";
+        history[method](null, null, url);
+        this.route();
+      }
+    },
+    get_sub_path_string(route) {
+      if (!route) {
+        route = window.location.pathname;
+        if (route.includes("app#")) {
+          route = window.location.hash;
+        }
+      }
+      return this.strip_prefix(route);
+    },
+    strip_prefix(route) {
+      if (route.substr(0, 1) == "/")
+        route = route.substr(1);
+      if (route.startsWith("app/"))
+        route = route.substr(4);
+      if (route == "app")
+        route = route.substr(4);
+      if (route.substr(0, 1) == "/")
+        route = route.substr(1);
+      if (route.substr(0, 1) == "#")
+        route = route.substr(1);
+      if (route.substr(0, 1) == "!")
+        route = route.substr(1);
+      console.log("strip_prefix_route", route);
+      var workspace = route.split("/")[0];
+      console.log("workspace", workspace);
+      var subPrefix = route.split("/").slice(1).join("/");
+      console.log("subPrefix", subPrefix);
+      var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form"];
+      var routeFix = subPrefix != "" && !exceptPrefix.includes(workspace) ? subPrefix : route;
+      console.log("strip_prefix_routeFix", routeFix);
+      var finalRoute = routeFix.startsWith("new") ? route : routeFix;
+      return finalRoute;
+    },
+    get_sub_path(route) {
+      var sub_path = this.get_sub_path_string(route);
+      route = $.map(sub_path.split("/"), this.decode_component).join("/");
+      return route;
+    },
+    set_route_options_from_url() {
+      let query_string = window.location.search;
+      if (!frappe.route_options) {
+        frappe.route_options = {};
+      }
+      let params = new URLSearchParams(query_string);
+      for (const [key, value] of params) {
+        frappe.route_options[key] = value;
+      }
+    },
+    decode_component(r) {
+      try {
+        return decodeURIComponent(r);
+      } catch (e) {
+        if (e instanceof URIError) {
+          return r;
+        } else {
+          throw e;
+        }
+      }
+    },
+    slug(name) {
+      return name.toLowerCase().replace(/ /g, "-");
+    }
+  };
+  frappe.get_route = () => frappe.router.current_route;
+  frappe.get_route_str = () => frappe.router.current_route.join("/");
+  frappe.set_route = function() {
+    return frappe.router.set_route.apply(frappe.router, arguments);
+  };
+  frappe.get_prev_route = function() {
+    if (frappe.route_history && frappe.route_history.length > 1) {
+      return frappe.route_history[frappe.route_history.length - 2];
+    } else {
+      return [];
+    }
+  };
+  frappe.set_re_route = function() {
+    var tmp = frappe.router.get_sub_path();
+    frappe.set_route.apply(null, arguments);
+    frappe.re_route[tmp] = frappe.router.get_sub_path();
+  };
+  frappe.has_route_options = function() {
+    return Boolean(Object.keys(frappe.route_options || {}).length);
+  };
+  frappe.utils.make_event_emitter(frappe.router);
+
+  // ../visualize/visualize/public/js/workspace.js
   var import_editorjs = __toESM(require_editor());
   var import_editorjs_undo = __toESM(require_bundle());
   frappe.standard_pages["Workspaces"] = function() {
@@ -10526,11 +11475,12 @@
       });
     }
     sidebar_item_container(item) {
+      console.log("item sidebar", item);
       return $(`
 			<div class="sidebar-item-container" item-parent="${item.parent_menu}" item-name="${item.label}" item-public="${item.public || 0}">
 				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
 					<a
-						href="/app/${item.link_type == item.link_to ? frappe.router.slug(item.link_to) : frappe.router.slug(item.link_type) + "/" + item.link_to}"
+						href="/app/${frappe.router.slug(item.workspace_name)}/${frappe.router.slug(item.link_to)}"
 						class="item-anchor block-click"}" title="${__(item.label)}"
 					>
 						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(item.icon || "folder-normal", "md")}</span>
@@ -10620,9 +11570,13 @@
         return;
       }
       let page = this.get_page_to_show();
-      this.page.set_title(__(page.name));
+      if (page.page_type == "Workspaces") {
+        this.page.set_title(__(page.name));
+      }
       let data = await this.get_pages_menu(page.name);
-      this.make_sidebar(data.pages);
+      if (page.page_type == "Workspaces") {
+        this.make_sidebar(data.pages);
+      }
       this.update_selected_sidebar(this.current_page, false);
       this.update_selected_sidebar(page, true);
       this.show_page(page);
@@ -10652,6 +11606,7 @@
       return frappe.call("frappe.desk.desktop.get_desktop_page", {
         page
       }).then((data) => {
+        console.log("get_data", data);
         this.page_data = data.message;
         this.pages[page.name] && delete this.pages[page.name];
         this.pages[page.name] = data.message;
@@ -10684,30 +11639,33 @@
       }
       let page = (frappe.get_route()[1] == "private" ? frappe.get_route()[2] : frappe.get_route()[1]) || default_page.name;
       let is_public = frappe.get_route()[1] ? frappe.get_route()[1] != "private" : default_page.public;
-      return { name: page, public: is_public };
+      let typePage = frappe.get_route()[0];
+      return { name: page, public: is_public, page_type: typePage != "" ? typePage : "Workspaces" };
     }
     async show_page(page) {
-      if (!this.body.find("#editorjs")[0]) {
-        this.$page = $(`
-				<div id="editorjs" class="desk-page page-main-content"></div>
-			`).appendTo(this.body);
-      }
-      if (this.all_pages) {
-        this.create_page_skeleton();
-        let pages = page.public ? this.public_pages : this.private_pages;
-        let current_page = pages.filter((p) => p.title == page.name)[0];
-        this.content = current_page && JSON.parse(current_page.content);
-        this.add_custom_cards_in_content();
-        $(".item-anchor").addClass("disable-click");
-        if (this.pages && this.pages[current_page.name]) {
-          this.page_data = this.pages[current_page.name];
-        } else {
-          await frappe.after_ajax(() => this.get_data(current_page));
+      if (page.page_type == "Workspaces") {
+        if (!this.body.find("#editorjs")[0]) {
+          this.$page = $(`
+					<div id="editorjs" class="desk-page page-main-content"></div>
+				`).appendTo(this.body);
         }
-        this.setup_actions(page);
-        this.prepare_editorjs();
-        $(".item-anchor").removeClass("disable-click");
-        this.remove_page_skeleton();
+        if (this.all_pages) {
+          this.create_page_skeleton();
+          let pages = page.public ? this.public_pages : this.private_pages;
+          let current_page = pages.filter((p) => p.title == page.name)[0];
+          this.content = current_page && JSON.parse(current_page.content);
+          this.add_custom_cards_in_content();
+          $(".item-anchor").addClass("disable-click");
+          if (this.pages && this.pages[current_page.name]) {
+            this.page_data = this.pages[current_page.name];
+          } else {
+            await frappe.after_ajax(() => this.get_data(current_page));
+          }
+          this.setup_actions(page);
+          this.prepare_editorjs();
+          $(".item-anchor").removeClass("disable-click");
+          this.remove_page_skeleton();
+        }
       }
     }
     add_custom_cards_in_content() {
@@ -11532,4 +12490,4 @@
   };
 })();
 /*! For license information please see editor.js.LICENSE.txt */
-//# sourceMappingURL=visualize.bundle.SXAXAS6V.js.map
+//# sourceMappingURL=visualize.bundle.I5ALWDGQ.js.map

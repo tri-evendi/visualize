@@ -87,13 +87,14 @@ frappe.views.Workspace = class Workspace {
 	}
 
 	sidebar_item_container(item) {
+		console.log("item sidebar",item);
 		return $(`
 			<div class="sidebar-item-container" item-parent="${
 			item.parent_menu
 		}" item-name="${item.label}" item-public="${item.public || 0}">
 				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
 					<a
-						href="/app/${item.link_type == item.link_to ? frappe.router.slug(item.link_to) : frappe.router.slug(item.link_type) + "/" + item.link_to}"
+						href="/app/${frappe.router.slug(item.workspace_name)}/${frappe.router.slug(item.link_to)}"
 						class="item-anchor block-click"}" title="${__(item.label)}"
 					>
 						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(
@@ -232,11 +233,15 @@ frappe.views.Workspace = class Workspace {
 		}
 
 		let page = this.get_page_to_show();
-		// console.log(page);
-		this.page.set_title(__(page.name));
-		let data = await this.get_pages_menu(page.name);
 
-		this.make_sidebar(data.pages);
+		if (page.page_type == "Workspaces") {
+			this.page.set_title(__(page.name));
+		}
+
+		let data = await this.get_pages_menu(page.name);
+		if (page.page_type == "Workspaces") {
+			this.make_sidebar(data.pages);
+		}
 
 		this.update_selected_sidebar(this.current_page, false); //remove selected from old page
 		this.update_selected_sidebar(page, true); //add selected on new page
@@ -278,6 +283,7 @@ frappe.views.Workspace = class Workspace {
 				page: page,
 			})
 			.then((data) => {
+				console.log("get_data",data);
 				this.page_data = data.message;
 
 				// caching page data
@@ -318,45 +324,44 @@ frappe.views.Workspace = class Workspace {
 			default_page = { name: "Home", public: true };
 		}
 
-		let page =
-			(frappe.get_route()[1] == "private" ? frappe.get_route()[2] : frappe.get_route()[1]) ||
-			default_page.name;
-		let is_public = frappe.get_route()[1]
-			? frappe.get_route()[1] != "private"
-			: default_page.public;
-		return { name: page, public: is_public };
+		let page = (frappe.get_route()[1] == "private" ? frappe.get_route()[2] : frappe.get_route()[1]) || default_page.name;
+		let is_public = frappe.get_route()[1] ? frappe.get_route()[1] != "private" : default_page.public;
+		let typePage = frappe.get_route()[0];
+		return { name: page, public: is_public, page_type: typePage != "" ? typePage : "Workspaces" };
 	}
 
 	async show_page(page) {
-		if (!this.body.find("#editorjs")[0]) {
-			this.$page = $(`
-				<div id="editorjs" class="desk-page page-main-content"></div>
-			`).appendTo(this.body);
-		}
-
-		if (this.all_pages) {
-			this.create_page_skeleton();
-
-			let pages = page.public ? this.public_pages : this.private_pages;
-			let current_page = pages.filter((p) => p.title == page.name)[0];
-			this.content = current_page && JSON.parse(current_page.content);
-
-			this.add_custom_cards_in_content();
-
-			$(".item-anchor").addClass("disable-click");
-
-			if (this.pages && this.pages[current_page.name]) {
-				this.page_data = this.pages[current_page.name];
-			} else {
-				await frappe.after_ajax(() => this.get_data(current_page));
+		if (page.page_type == "Workspaces") {
+			if (!this.body.find("#editorjs")[0]) {
+				this.$page = $(`
+					<div id="editorjs" class="desk-page page-main-content"></div>
+				`).appendTo(this.body);
 			}
 
-			this.setup_actions(page);
+			if (this.all_pages) {
+				this.create_page_skeleton();
 
-			this.prepare_editorjs();
-			$(".item-anchor").removeClass("disable-click");
+				let pages = page.public ? this.public_pages : this.private_pages;
+				let current_page = pages.filter((p) => p.title == page.name)[0];
+				this.content = current_page && JSON.parse(current_page.content);
 
-			this.remove_page_skeleton();
+				this.add_custom_cards_in_content();
+
+				$(".item-anchor").addClass("disable-click");
+
+				if (this.pages && this.pages[current_page.name]) {
+					this.page_data = this.pages[current_page.name];
+				} else {
+					await frappe.after_ajax(() => this.get_data(current_page));
+				}
+
+				this.setup_actions(page);
+
+				this.prepare_editorjs();
+				$(".item-anchor").removeClass("disable-click");
+
+				this.remove_page_skeleton();
+			}
 		}
 	}
 

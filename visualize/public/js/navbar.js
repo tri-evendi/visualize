@@ -31,7 +31,7 @@ frappe.ui.toolbar.Toolbar = class {
             page.is_editable = !page.public || this.has_access;
         });
 
-        this.public_pages = this.all_pages.filter((page) => page.public);
+        this.public_pages = this.all_pages.filter((page) => page.public).slice(0, 7);
         this.private_pages = this.all_pages.filter((page) => !page.public);
 
         // console.log(this.public_pages);
