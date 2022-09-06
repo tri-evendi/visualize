@@ -90,6 +90,7 @@ frappe.router = {
 		"inbox",
 	],
 	layout_mapped: {},
+	menu: [],
 
 	is_app_route(path) {
 		// desk paths must begin with /app or doctype route
@@ -443,7 +444,25 @@ frappe.router = {
 		return this.strip_prefix(route);
 	},
 
+	get_menus() {
+        return frappe.xcall("frappe.desk.desktop.get_workspace_sidebar_items");
+	},
+
+	async normalize_menu() {
+		const menus = await this.get_menus();
+		// make everything lowercase and replace " " with "-"
+		this.menu = $.map(menus.pages, function (m) {
+			m.name = m.name.toLowerCase().replace(/ /g, "-");
+			return m;
+		});
+	},
+
 	strip_prefix(route) {
+		this.normalize_menu();
+		let menu_name = [];
+		this.menu.forEach((item) => {
+			menu_name.push(item.name);
+		});
 		if (route.substr(0, 1) == "/") route = route.substr(1); // for /app/sub
 		if (route.startsWith("app/")) route = route.substr(4); // for desk/sub
 		if (route == "app") route = route.substr(4); // for /app
@@ -452,8 +471,9 @@ frappe.router = {
 		if (route.substr(0, 1) == "!") route = route.substr(1);
 		var workspace = route.split("/")[0];
 		var subPrefix = route.split("/").slice(1).join("/");
-		var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form", "custom-field"];
-		var routeFix = subPrefix != "" && !exceptPrefix.includes(workspace) ? subPrefix : route;
+		// var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form", "custom-field"];
+		// var routeFix = subPrefix != "" && !exceptPrefix.includes(workspace) ? subPrefix : route;
+		var routeFix = subPrefix != "" && menu_name.includes(workspace) ? subPrefix : route;
 		var finalRoute = routeFix.startsWith("new") ? route : routeFix;
 		return finalRoute;
 	},

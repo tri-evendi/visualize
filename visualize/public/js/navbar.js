@@ -32,7 +32,7 @@ frappe.ui.toolbar.Toolbar = class {
             page.is_editable = !page.public || this.has_access;
         });
 
-        this.public_pages = this.all_pages.filter((page) => page.public).slice(0, 7);
+        this.public_pages = this.all_pages.filter((page) => page.public).slice(0, 8);
         this.private_pages = this.all_pages.filter((page) => !page.public);
 
         if (this.all_pages) {
@@ -61,7 +61,7 @@ frappe.ui.toolbar.Toolbar = class {
 		let navbar = $('<ul class="navbar-default navbar-nav"></ul>');
 		pages.forEach((item) => {
             let navbar_item = $(`
-				<li class="nav-item">
+				<li class="nav-item nav-item-menu ${frappe.router.slug(item.title)} ${this.pathname == frappe.router.slug(item.title) ? "active" : ""}" title="${frappe.router.slug(item.title)}">
 					<a class="nav-link" href="/app/${frappe.router.slug(item.title)}"></a>
 				</li>`
             );
@@ -123,7 +123,17 @@ frappe.ui.toolbar.Toolbar = class {
             }
         });
 
-        $(document).on("page-change", function () {
+		$(document).on("page-change", function () {
+			var $nav_item = $(".nav-item-menu");
+			// get all nav items and check if have class name same as pathname and add active class
+			$nav_item.each(function () {
+				if ($(this).hasClass(window.location.pathname.split("/")[2])) {
+					$(this).addClass("active");
+				} else {
+					$(this).removeClass("active");
+				}
+			});
+
             var $help_links = $(".dropdown-help #help-links");
             $help_links.html("");
 

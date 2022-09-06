@@ -10690,7 +10690,7 @@
       this.all_pages.forEach((page) => {
         page.is_editable = !page.public || this.has_access;
       });
-      this.public_pages = this.all_pages.filter((page) => page.public).slice(0, 7);
+      this.public_pages = this.all_pages.filter((page) => page.public).slice(0, 8);
       this.private_pages = this.all_pages.filter((page) => !page.public);
       if (this.all_pages) {
         frappe.workspaces = {};
@@ -10714,7 +10714,7 @@
       let navbar = $('<ul class="navbar-default navbar-nav"></ul>');
       pages.forEach((item) => {
         let navbar_item = $(`
-				<li class="nav-item">
+				<li class="nav-item nav-item-menu ${frappe.router.slug(item.title)} ${this.pathname == frappe.router.slug(item.title) ? "active" : ""}" title="${frappe.router.slug(item.title)}">
 					<a class="nav-link" href="/app/${frappe.router.slug(item.title)}"></a>
 				</li>`);
         let a = navbar_item.find("a");
@@ -10764,6 +10764,14 @@
         }
       });
       $(document).on("page-change", function() {
+        var $nav_item = $(".nav-item-menu");
+        $nav_item.each(function() {
+          if ($(this).hasClass(window.location.pathname.split("/")[2])) {
+            $(this).addClass("active");
+          } else {
+            $(this).removeClass("active");
+          }
+        });
         var $help_links = $(".dropdown-help #help-links");
         $help_links.html("");
         var route = frappe.get_route_str();
@@ -11005,6 +11013,7 @@
       "inbox"
     ],
     layout_mapped: {},
+    menu: [],
     is_app_route(path) {
       if (path.substr(0, 1) === "/")
         path = path.substr(1);
@@ -11257,7 +11266,22 @@
       }
       return this.strip_prefix(route);
     },
+    get_menus() {
+      return frappe.xcall("frappe.desk.desktop.get_workspace_sidebar_items");
+    },
+    async normalize_menu() {
+      const menus = await this.get_menus();
+      this.menu = $.map(menus.pages, function(m) {
+        m.name = m.name.toLowerCase().replace(/ /g, "-");
+        return m;
+      });
+    },
     strip_prefix(route) {
+      this.normalize_menu();
+      let menu_name = [];
+      this.menu.forEach((item) => {
+        menu_name.push(item.name);
+      });
       if (route.substr(0, 1) == "/")
         route = route.substr(1);
       if (route.startsWith("app/"))
@@ -11272,8 +11296,7 @@
         route = route.substr(1);
       var workspace = route.split("/")[0];
       var subPrefix = route.split("/").slice(1).join("/");
-      var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form", "custom-field"];
-      var routeFix = subPrefix != "" && !exceptPrefix.includes(workspace) ? subPrefix : route;
+      var routeFix = subPrefix != "" && menu_name.includes(workspace) ? subPrefix : route;
       var finalRoute = routeFix.startsWith("new") ? route : routeFix;
       return finalRoute;
     },
@@ -11555,12 +11578,7 @@
     }
     get_page_to_show() {
       let default_page;
-      if (localStorage.current_page && this.all_pages.filter((page2) => page2.title == localStorage.current_page).length != 0) {
-        default_page = {
-          name: localStorage.current_page,
-          public: localStorage.is_current_page_public == "true"
-        };
-      } else if (Object.keys(this.all_pages).length !== 0) {
+      if (Object.keys(this.all_pages).length !== 0) {
         default_page = { name: this.all_pages[0].title, public: true };
       } else {
         default_page = { name: "Home", public: true };
@@ -12418,4 +12436,4 @@
   };
 })();
 /*! For license information please see editor.js.LICENSE.txt */
-//# sourceMappingURL=visualize.bundle.UV5DKZLG.js.map
+//# sourceMappingURL=visualize.bundle.WXEFTI7I.js.map
