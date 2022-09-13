@@ -458,11 +458,13 @@ frappe.router = {
 	},
 
 	strip_prefix(route) {
-		this.normalize_menu();
-		let menu_name = [];
-		this.menu.forEach((item) => {
-			menu_name.push(item.name);
-		});
+		// this.normalize_menu();
+		// let menu_name = [];
+		// this.menu.forEach((item) => {
+		// 	menu_name.push(item.name);
+		// });
+		let navMenu = ['home', 'accounting', 'assets', 'build', 'buying', 'crm', 'customization', 'erpnext-integrations', 'erpnext-settings', 'integrations', 'loans', 'manufacturing', 'projects', 'quality', 'retail', 'selling', 'stock', 'support', 'tools', 'users', 'website', 'settings', 'utilities'];
+		// if (menu_name.length < 1) return this.normalize_menu();
 		if (route.substr(0, 1) == "/") route = route.substr(1); // for /app/sub
 		if (route.startsWith("app/")) route = route.substr(4); // for desk/sub
 		if (route == "app") route = route.substr(4); // for /app
@@ -473,7 +475,7 @@ frappe.router = {
 		var subPrefix = route.split("/").slice(1).join("/");
 		// var exceptPrefix = ["workspace", "module-def", "doctype", "page", "report", "customize-form", "custom-field"];
 		// var routeFix = subPrefix != "" && !exceptPrefix.includes(workspace) ? subPrefix : route;
-		var routeFix = subPrefix != "" && menu_name.includes(workspace) ? subPrefix : route;
+		var routeFix = subPrefix && navMenu.includes(workspace) ? subPrefix : route;
 		var finalRoute = routeFix.startsWith("new") ? route : routeFix;
 		return finalRoute;
 	},
