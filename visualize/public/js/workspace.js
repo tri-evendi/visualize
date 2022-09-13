@@ -71,7 +71,7 @@ frappe.views.Workspace = class Workspace {
 			for (let page of this.all_pages) {
 				frappe.workspaces[frappe.router.slug(page.name)] = { title: page.title };
 			}
-			// this.make_sidebar();
+			this.make_sidebar(this.public_pages_menu);
 			reload && this.show();
 		}
 	}
@@ -88,18 +88,13 @@ frappe.views.Workspace = class Workspace {
 
 	sidebar_item_container(item) {
 		return $(`
-			<div class="sidebar-item-container" item-parent="${
-			item.parent_menu
-		}" item-name="${item.label}" item-public="${item.public || 0}">
+			<div class="sidebar-item-container" item-parent="${item.parent_menu}" item-name="${item.label}" item-public="${item.public || 0}">
 				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
 					<a
 						href="/app/${frappe.router.slug(item.workspace_name)}/${frappe.router.slug(item.link_to)}"
 						class="item-anchor block-click"}" title="${__(item.label)}"
 					>
-						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(
-			item.icon || "folder-normal",
-			"md"
-		)}</span>
+						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(item.icon || "folder-normal","md")}</span>
 						<span class="sidebar-item-label">${__(item.label)}<span>
 					</a>
 					<div class="sidebar-item-control"></div>
@@ -118,15 +113,6 @@ frappe.views.Workspace = class Workspace {
 
 		parent_menu.forEach((parent) => {
 			let root_pages = all_menu.filter((page) => page.parent_menu === parent.idx);
-			// let root_pages_container = this.sidebar_item_container(category);
-			// this.sidebar.append(root_pages_container);
-
-			// let root_pages = this.all_pages_menu.filter((page) => page.parent_menu == category.idx);
-			// if (category != "Public") {
-			// 	root_pages = this.private_pages.filter(
-			// 		(page) => page.parent_page == "" || page.parent_page == null
-			// 	);
-			// }
 			this.build_sidebar_section(parent.label, root_pages);
 		});
 
@@ -143,7 +129,7 @@ frappe.views.Workspace = class Workspace {
 			`<div class="standard-sidebar-section nested-container" data-title="${title}"></div>`
 		);
 
-		let $title = $(`<div class="standard-sidebar-label">
+		let $title = $(`<div class="standard-sidebar-label parent_sidebar">
 			<span>${frappe.utils.icon("small-down", "xs")}</span>
 			<span class="section-title">${__(title)}<span>
 		</div>`).appendTo(sidebar_section);
@@ -169,9 +155,7 @@ frappe.views.Workspace = class Workspace {
 	}
 
 	append_item(item, container) {
-		let is_current_page =
-			frappe.router.slug(item.label) == frappe.router.slug(this.get_page_to_show().name) &&
-			item.public == this.get_page_to_show().public;
+		let is_current_page = frappe.router.slug(item.link_to) == window.location.pathname.split("/")[3];
 		item.selected = is_current_page;
 		if (is_current_page) {
 			this.current_page = { name: item.label, public: item.public };

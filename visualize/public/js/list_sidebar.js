@@ -1,54 +1,23 @@
 // Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // MIT License. See license.txt
-// import ListFilter from "./list_filter";
 frappe.provide("frappe.views");
 
-// opts:
-// stats = list of fields
-// doctype
-// parent
-
+// Custom List Sidebar
 frappe.views.ListSidebar = class ListSidebar {
 	constructor(opts) {
 		$.extend(this, opts);
 		this.pathname = window.location.pathname.split("/")[2];
-		this.make();
+		this.prepare_container();
+		this.setup_menus();
 	}
 
-	async make() {
-		let sidebar_menu = await this.get_pages_menu(this.pathname != "" ? this.pathname : "Home");
-		this.tempData = sidebar_menu.pages;
-
-		// this.sidebar = $('<div class="list-sidebar overlay-sidebar hidden-xs hidden-sm"></div>')
-		// 	.html(sidebar_content)
-		// 	.appendTo(this.page.sidebar.empty());
-
-		// this.setup_list_filter();
-		// this.setup_list_group_by();
-
+	async prepare_container() {
 		let list_sidebar = $(`
 			<div class="list-sidebar overlay-sidebar hidden-xs hidden-sm">
 				<div class="desk-sidebar list-unstyled sidebar-menu"></div>
 			</div>
 		`).appendTo(this.page.sidebar.empty());
 		this.sidebar = list_sidebar.find(".desk-sidebar");
-
-		// do not remove
-		// used to trigger custom scripts
-		$(document).trigger("list_sidebar_setup");
-
-		// if (
-		// 	this.list_view.list_view_settings &&
-		// 	this.list_view.list_view_settings.disable_sidebar_stats
-		// ) {
-		// 	this.sidebar.find(".list-tags").remove();
-		// } else {
-		// 	this.sidebar.find(".list-stats").on("click", (e) => {
-		// 		this.reload_stats();
-		// 	});
-		// }
-
-		this.setup_sidebar_menu();
 	}
 
 	get_pages_menu(workspace) {
@@ -57,8 +26,9 @@ frappe.views.ListSidebar = class ListSidebar {
 		});
 	}
 
-	async setup_sidebar_menu() {
+	async setup_menus() {
 		let data = await this.get_pages_menu(this.pathname);
+		this.menuData = data.pages;
 		this.make_sidebar(data.pages);
 	}
 
@@ -71,15 +41,6 @@ frappe.views.ListSidebar = class ListSidebar {
 
 		parent_menu.forEach((parent) => {
 			let root_pages = all_menu.filter((page) => page.parent_menu === parent.idx);
-			// let root_pages_container = this.sidebar_item_container(category);
-			// this.sidebar.append(root_pages_container);
-
-			// let root_pages = this.all_pages_menu.filter((page) => page.parent_menu == category.idx);
-			// if (category != "Public") {
-			// 	root_pages = this.private_pages.filter(
-			// 		(page) => page.parent_page == "" || page.parent_page == null
-			// 	);
-			// }
 			this.build_sidebar_section(parent.label, root_pages);
 		});
 
@@ -88,29 +49,23 @@ frappe.views.ListSidebar = class ListSidebar {
 			!frappe.dom.is_element_in_viewport(this.sidebar.find(".selected")) &&
 			this.sidebar.find(".selected")[0].scrollIntoView();
 
-		// this.remove_sidebar_skeleton();
+		this.remove_sidebar_skeleton();
 	}
 
-	prepare_sidebar(items, child_container, item_container) {
-		items.forEach((item) => this.append_item(item, child_container));
-		child_container.appendTo(item_container);
+	remove_sidebar_skeleton() {
+		$(".desk-sidebar").removeClass("hidden");
+		$(".list-sidebar").find(".workspace-sidebar-skeleton").remove();
 	}
 
 	append_item(item, container) {
-		// let is_current_page =
-		// 	frappe.router.slug(item.label) == frappe.router.slug(this.get_page_to_show().name) &&
-		// 	item.public == this.get_page_to_show().public;
-		let is_current_page = "";
+		let is_current_page = frappe.router.slug(item.link_to) == window.location.pathname.split("/")[3];
 		item.selected = is_current_page;
 		if (is_current_page) {
 			this.current_page = { name: item.label, public: item.public };
 		}
 
 		let $item_container = this.sidebar_item_container(item);
-		let sidebar_control = $item_container.find(".sidebar-item-control");
-
-		// this.add_sidebar_actions(item, sidebar_control);
-		let pages = item.public ? this.tempData : this.private_pages_menu;
+		let pages = item.public ? this.menuData : this.private_pages_menu;
 
 		let child_items = pages.filter((page) => page.parent_menu == item.label);
 		if (child_items.length > 0) {
@@ -120,53 +75,26 @@ frappe.views.ListSidebar = class ListSidebar {
 		}
 
 		$item_container.appendTo(container);
-		// this.sidebar_items[item.public ? "public" : "private"][item.label] = $item_container;
 
 		if ($item_container.parent().hasClass("hidden") && is_current_page) {
 			$item_container.parent().toggleClass("hidden");
 		}
-
-		// this.add_drop_icon(item, sidebar_control, $item_container);
 	}
 
-	add_drop_icon(item, sidebar_control, item_container) {
-		let drop_icon = "small-down";
-		if (item_container.find(`[item-name="${this.current_page.name}"]`).length) {
-			drop_icon = "small-up";
-		}
-
-		let $child_item_section = item_container.find(".sidebar-child-item");
-		let $drop_icon = $(
-			`<span class="drop-icon hidden">${frappe.utils.icon(drop_icon, "sm")}</span>`
-		).appendTo(sidebar_control);
-		let pages = item.public ? this.public_pages : this.private_pages;
-		if (pages.some((e) => e.parent_page == item.title)) {
-			$drop_icon.removeClass("hidden");
-		}
-		$drop_icon.on("click", () => {
-			let icon =
-				$drop_icon.find("use").attr("href") === "#icon-small-down"
-					? "#icon-small-up"
-					: "#icon-small-down";
-			$drop_icon.find("use").attr("href", icon);
-			$child_item_section.toggleClass("hidden");
-		});
+	prepare_sidebar(items, child_container, item_container) {
+		items.forEach((item) => this.append_item(item, child_container));
+		child_container.appendTo(item_container);
 	}
 
 	sidebar_item_container(item) {
 		return $(`
-			<div class="sidebar-item-container" item-parent="${
-			item.parent_menu
-		}" item-name="${item.label}" item-public="${item.public || 0}">
+			<div class="sidebar-item-container" item-parent="${item.parent_menu}" item-name="${item.label}" item-public="${item.public || 0}">
 				<div class="desk-sidebar-item standard-sidebar-item ${item.selected ? "selected" : ""}">
 					<a
 						href="/app/${frappe.router.slug(item.workspace_name)}/${frappe.router.slug(item.link_to)}"
 						class="item-anchor block-click"}" title="${__(item.label)}"
 					>
-						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(
-			item.icon || "folder-normal",
-			"md"
-		)}</span>
+						<span class="sidebar-item-icon" item-icon=${item.icon || "folder-normal"}>${frappe.utils.icon(item.icon || "folder-normal","md")}</span>
 						<span class="sidebar-item-label">${__(item.label)}<span>
 					</a>
 					<div class="sidebar-item-control"></div>
@@ -181,7 +109,7 @@ frappe.views.ListSidebar = class ListSidebar {
 			`<div class="standard-sidebar-section nested-container" data-title="${title}"></div>`
 		);
 
-		let $title = $(`<div class="standard-sidebar-label">
+		let $title = $(`<div class="standard-sidebar-label parent_sidebar">
 			<span>${frappe.utils.icon("small-down", "xs")}</span>
 			<span class="section-title">${__(title)}<span>
 		</div>`).appendTo(sidebar_section);
